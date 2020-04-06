@@ -16,25 +16,13 @@ clear
 %load smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
 %load smilefrown2filt0p5notch56t64p120epoch.mat
-load run15filt0p5doublenotch56t64a120epochs.mat
+%load run15filt0p5doublenotch56t64a120epochs.mat
+
+load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
 
+%%
 
-%% Add some info to the EEG structure to make life easier (trial labels)
-
-EEG.timessec = EEG.times./1000; %version of times in seconds, useful for signal processing
-
-% Create a new categorical variable for easier manipulation.
-% Note, this will be inaccurate if you select a subset of the data without
-% subsetting this.
-for epoch = 1:EEG.trials
-    for i = 1:length(EEG.epoch(epoch).eventlatency)
-        if EEG.epoch(epoch).eventlatency{i} == 0
-            EEG.epochlabelscat{epoch} = EEG.epoch(epoch).eventtype{i};
-        end
-    end
-end
-EEG.epochlabelscat = categorical(EEG.epochlabelscat);
 %make an array of all possible labels of events in your data
 availableeventlabels = unique(EEG.epochlabelscat);
 
@@ -46,9 +34,12 @@ availableeventlabels = unique(EEG.epochlabelscat);
 %% Select which conditions to include in your analysis
 
 % If you want all conditions then use [];
-condnames =  {"LEFT pressed", "SPACE pressed"};
-channel = 2;
-    
+condnames =  {"FP", "FU"};
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 idxtrials = [];
 if isempty(condnames)
     idxtrials = 1:length(EEG.epochlabelscat);
@@ -61,9 +52,12 @@ else
 end
 
 %% Probably want to add train/test separation here
-dotrainandtest = false; %If false, do train only and cross validate
+dotrainandtest = true; %If false, do train only and cross validate
 % You might do false if you have very little data or if you have a separate
 % test set in another file
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ttpartgroups = removecats(EEG.epochlabelscat(idxtrials))';
 
@@ -81,18 +75,23 @@ if dotrainandtest
 
     testdata = table(EEG.epochlabelscat(idxtrials(ttpart.test))',idxtrials(ttpart.test)','VariableNames',{'labels','origEEGtrialidx'});
     testdata.labels = removecats(testdata.labels);
-else
+else %Otherwise all the data is training
+    traindata = table(EEG.epochlabelscat(idxtrials)',idxtrials','VariableNames',{'labels','origEEGtrialidx'});
+    traindata.labels = removecats(traindata.labels); % This remove the other trial catgories that we're not using here from the train data, which will prevent a warning
+end
     
+traindata = traindata(randperm(height(traindata)),:); % Use this if you
+%have a temporal classifier so your train is not all one category first
 
 %% Do feature extraction for selected trials
 
-timewindowforfeatures = [2 2000]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
+timewindowforfeatures = [0 1000]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
 timewindowepochidx = (find(EEG.times>=timewindowforfeatures(1),1)):(find(EEG.times>=timewindowforfeatures(2),1));
 
 
 
 includedfeatures = {'absmean', 'trialstd'}; %names of included features in the data table
-includedchannels = 1:2; %channels to included, this will calculate features for each separately 
+includedchannels = 1:3; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
 %skip in order to avoid repeat features)
 
@@ -104,7 +103,11 @@ for ttround = 1:2
     if ttround == 1
         %Do training data first
         tempdata = traindata;
-        idxt = idxtrials(ttpart.training);
+        if dotrainandtest
+            idxt = idxtrials(ttpart.training);
+        else
+            idxt = idxtrials;
+        end
     elseif ttround == 2
         tempdata = testdata;
         idxt = idxtrials(ttpart.test);
@@ -163,6 +166,7 @@ response = traindata(:,'labels'); %labels
 
 imbalancedcostmatrix.ClassNames = unique(response{:,1}); 
 imbalancedcostmatrix.ClassificationCosts =  [0 sum(traindata.labels == imbalancedcostmatrix.ClassNames(2)); sum(traindata.labels == imbalancedcostmatrix.ClassNames(1)) 0];
+imbalancedcostmatrix.ClassificationCosts
 trainedClassifier = fitcsvm(predictors, ...
     response, ...
     'KernelFunction', 'linear', ...
@@ -189,3 +193,8 @@ if dotrainandtest
     testconchart = confusionchart(testdata.labels,predictedlabel,'Normalization','row-normalized');
     testconchart.NormalizedValues
 end
+
+%% Create some graphs to compare (from frown smile initial analysis)
+
+load colormapjetwhite.mat; %loads cmapwj to do a colormap with white instead of green for jet
+

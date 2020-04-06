@@ -16,11 +16,12 @@ clear
 %load smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
 %load smilefrown2filt0p5notch56t64p120epoch.mat
-load run15filt0p5doublenotch56t64a120epochs.mat
+%load run15filt0p5doublenotch56t64a120epochs.mat
 
-
+load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
 %% Add some info to the EEG structure to make life easier (trial labels)
+% SKIP THIS FOR THE study1_emg version
 
 EEG.timessec = EEG.times./1000; %version of times in seconds, useful for signal processing
 
@@ -35,6 +36,8 @@ for epoch = 1:EEG.trials
     end
 end
 EEG.epochlabelscat = categorical(EEG.epochlabelscat);
+%%
+
 %make an array of all possible labels of events in your data
 availableeventlabels = unique(EEG.epochlabelscat);
 
@@ -46,7 +49,7 @@ availableeventlabels = unique(EEG.epochlabelscat);
 %% Select which conditions to include in your analysis
 
 % If you want all conditions then use [];
-condnames =  {"Completed1", "SPACE pressed"};
+condnames =  {"DOWN pressed", "UP pressed"};
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
