@@ -16,9 +16,9 @@ clear
 %load smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
 %load smilefrown2filt0p5notch56t64p120epoch.mat
-%load run15filt0p5doublenotch56t64a120epochs.mat
+load run15filt0p5doublenotch56t64a120epochs.mat
 
-load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
+%load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
 %% Add some info to the EEG structure to make life easier (trial labels)
 % SKIP THIS FOR THE study1_emg version
@@ -67,7 +67,7 @@ else
 end
 
 %% Probably want to add train/test separation here
-dotrainandtest = false; %If false, do train only and cross validate
+dotrainandtest = true; %If false, do train only and cross validate
 % You might do false if you have very little data or if you have a separate
 % test set in another file
 
