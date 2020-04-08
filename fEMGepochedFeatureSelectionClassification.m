@@ -15,7 +15,7 @@ clear
 
 %load smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
-%load smilefrown2filt0p5notch56t64p120epoch.mat
+% load smilefrown2filt0p5notch56t64p120epoch.mat
 load run15filt0p5doublenotch56t64a120epochs.mat
 
 %load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
@@ -104,7 +104,7 @@ timewindowepochidx = (find(EEG.times>=timewindowforfeatures(1),1)):(find(EEG.tim
 
 
 
-includedfeatures = {'rms', 'var', 'iemg', 'ssi', 'mpv'}; %names of included features in the data table
+includedfeatures = {'rms', 'absmean', 'var', 'iemg'}; %names of included features in the data table
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
 %skip in order to avoid repeat features)
