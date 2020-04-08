@@ -51,7 +51,6 @@ availableeventlabels = unique(EEG.epochlabelscat);
 % If you want all conditions then use [];
 condnames =  {"DOWN pressed", "UP pressed"};
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -105,7 +104,7 @@ timewindowepochidx = (find(EEG.times>=timewindowforfeatures(1),1)):(find(EEG.tim
 
 
 
-includedfeatures = {'absmean', 'trialstd'}; %names of included features in the data table
+includedfeatures = {'rms', 'var', 'iemg', 'ssi', 'mpv'}; %names of included features in the data table
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
 %skip in order to avoid repeat features)
@@ -131,15 +130,30 @@ for ttround = 1:2
 
     for ch = includedchannels %not necessarily a linear index, so be careful
         for f = 1:length(includedfeatures)
-            clear fvalues
-            
+            clear fvalues    
             switch includedfeatures{f}
                 case 'absmean'
                     td = EEG.data(ch,:,idxt) - mean(EEG.data(ch,timewindowepochidx,idxt)); %remove the trial mean
                     fvalues = squeeze(mean(abs(td),2));
+                case 'rms'
+                    fvalues = squeeze(rms(EEG.data(ch,timewindowepochidx,idxt)));
+                case 'iemg'
+                    fvalues = squeeze(sum(abs(EEG.data(ch,timewindowepochidx,idxt)), 2));
+                case 'ssi'
+                    fvalues = squeeze(sum(abs(EEG.data(ch,timewindowepochidx,idxt)), 2));
+                case 'mpv'
+                    fvalues = squeeze(max(EEG.data(ch,timewindowepochidx,idxt), [], 2));
+                case 'mmav1'
+                    low = prctile(EEG.data(ch,timewindowepochidx,idxt),25,2);
+                    high = prctile(EEG.data(ch,timewindowepochidx,idxt),75,2);
+                    weightedVals = EEG.data(ch,timewindowepochidx);
+                    weightedVals(weightedVals < low) = weightedVals(weightedVals < low)*.5;
+                    weightedVals(weightedVals > high) = weightedVals(weightedVals > high)*.5;
+                    fvalues = squeeze(mean(abs(weightedVals),2));
+                case 'var'
+                    fvalues = squeeze(var(EEG.data(ch,timewindowepochidx,idxt), 0, 2));
                 case 'trialstd'
                     fvalues = squeeze(std(EEG.data(ch,timewindowepochidx,idxt),0,2));
-
                 otherwise
                     disp(strcat('unknown feature: ', includedfeatures{f},', skipping....'))
             end
