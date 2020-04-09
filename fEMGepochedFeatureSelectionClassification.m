@@ -17,8 +17,8 @@ clear
 %load data/smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
 % load data/smilefrown2filt0p5notch56t64p120epoch.mat
-%load data/run15filt0p5doublenotch56t64a120epochs.mat
-load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
+load data/run15filt0p5doublenotch56t64a120epochs.mat
+%load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
 
 %load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
@@ -56,7 +56,7 @@ for channel =1:size(EEG.data,1)
     
     %Trial by trial baseline removal (can also do pre-event baseline removal
     %instead
-    %EEG.data(channel,:, :) = EEG.data(channel,:, :) - mean(EEG.data(channel,:, :),2);
+    EEG.data(channel,:, :) = EEG.data(channel,:, :) - mean(EEG.data(channel,:, :),2);
     
     % additional filtering (might want to do this with the continuous data
     % instead, if you find somethign you like)
@@ -66,7 +66,7 @@ end
 %% Select which conditions to include in your analysis
 
 % If you want all conditions then use [];
-condnames =  {"F pressed", "S pressed"};
+condnames =  {"DOWN pressed", "SPACE pressed"};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -136,9 +136,9 @@ w.alltimewindowsforfeatures = [w.starttimes; w.endtimes]; %(:,1) for first pair
 
 %%
 
-
-
-includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
+%includedfeatures = {'bp2t20','bp40t56','bp64t80' ,'bp80t110'};
+includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var'};
+%includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
 %includedfeatures = {'rms', 'iemg','mmav1','var'}; %names of included features in the data table
 
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
@@ -201,8 +201,16 @@ for ttround = 1:2
                         fvalues = [fvalues squeeze(mean(abs(weightedVals),2))];
                     case 'var'
                         fvalues = [fvalues squeeze(var(EEG.data(ch,timewindowepochidx,idxt), 0, 2))];
-                    case 'trialstd'
-                        fvalues = [fvalues squeeze(std(EEG.data(ch,timewindowepochidx,idxt),0,2))];
+                    case 'bp2t20'                       
+                        fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[2 20])'];
+                    case 'bp40t56'                       
+                        fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[40 56])'];
+                    case 'bp64t80'                       
+                        fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[64 80])'];
+                    case 'bp80t110'                       
+                        fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[80 110])'];
+                    
+                    
                     otherwise
                         disp(strcat('unknown feature: ', includedfeatures{f},', skipping....'))
                 end
@@ -260,8 +268,10 @@ imbalancedcostmatrix.ClassificationCosts
 trainedClassifier = fitcsvm(predictors, ...
     response, ...
     'KernelFunction', 'Linear', ...
-    'Standardize',true,...
+    'Standardize',true,...  
     'Cost',imbalancedcostmatrix );  % Rows are true for cost matrix
+%trainedClassifier = fitcecoc(predictors,response,'KernelFunction', 'Linear');
+%'OutlierFraction',0.15,...
 
 % k-fold cross validation
 kval = min(5,height(response)-2); %Choose number of folds. You can also just set this manually.
