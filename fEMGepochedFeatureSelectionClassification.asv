@@ -17,8 +17,8 @@ clear
 %load data/smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
 % load data/smilefrown2filt0p5notch56t64p120epoch.mat
-%load data/run15filt0p5doublenotch56t64a120epochs.mat
-load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
+load data/run15filt0p5doublenotch56t64a120epochs.mat
+%load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
 
 %load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
@@ -66,7 +66,7 @@ end
 %% Select which conditions to include in your analysis
 
 % If you want all conditions then use [];
-condnames =  {"F pressed", "S pressed"};
+condnames =  {"LEFT pressed", "DOWN pressed"};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,7 +119,7 @@ end
 w.totaltimewindow = [0 2000]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
 %timetimewindowepochidx = (find(EEG.times>=timewindowforfeatures(1),1)):(find(EEG.times>=timewindowforfeatures(2),1));
 
-w.timewindowbinsize = 250; %This should ideally divide into an equal number of time points
+w.timewindowbinsize = 500; %This should ideally divide into an equal number of time points
 w.timewindowoverlap = 0; %128 for another paper
 
 w.starttimes = w.totaltimewindow(1):(w.timewindowbinsize-w.timewindowoverlap):w.totaltimewindow(2);
