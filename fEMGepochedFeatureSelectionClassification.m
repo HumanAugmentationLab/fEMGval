@@ -17,13 +17,16 @@ clear
 %load data/smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
 % load data/smilefrown2filt0p5notch56t64p120epoch.mat
-load data/run15filt0p5doublenotch56t64a120epochs.mat
+%load data/run15filt0p5doublenotch56t64a120epochs.mat
+%load data/run16rawdatafilt0p5notch56t64epochs.mat
 %load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
+load data/run17rawdatafilt0p5notch56t64epochs.mat
+
+%load data/run18rawdatafilt0p5notch56t64epochs.mat
 
 %load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
 %% Add some info to the EEG structure to make life easier (trial labels)
-% SKIP THIS FOR THE study1_emg version
 
 EEG.timessec = EEG.times./1000; %version of times in seconds, useful for signal processing
 
@@ -60,13 +63,13 @@ for channel =1:size(EEG.data,1)
     
     % additional filtering (might want to do this with the continuous data
     % instead, if you find somethign you like)
-    EEG.data(channel,:, :) = highpass(squeeze(EEG.data(channel,:, :)),20,EEG.srate);
+    %EEG.data(channel,:, :) = highpass(squeeze(EEG.data(channel,:, :)),20,EEG.srate);
 end
 
 %% Select which conditions to include in your analysis
 
 % If you want all conditions then use [];
-condnames =  {"DOWN pressed", "SPACE pressed"};
+condnames =  {"SPACE pressed", "DOWN pressed"};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -83,7 +86,7 @@ else
 end
 
 %% Train/test separation 
-dotrainandtest = true; %If false, do train only and cross validate
+dotrainandtest = false; %If false, do train only and cross validate
 % You might do false if you have very little data or if you have a separate
 % test set in another file
 
@@ -116,10 +119,10 @@ end
 
 %% Do feature extraction for selected trials
 
-w.totaltimewindow = [0 2000]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
+w.totaltimewindow = [200 1400]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
 %timetimewindowepochidx = (find(EEG.times>=timewindowforfeatures(1),1)):(find(EEG.times>=timewindowforfeatures(2),1));
 
-w.timewindowbinsize = 250; %This should ideally divide into an equal number of time points
+w.timewindowbinsize = 200; %This should ideally divide into an equal number of time points
 w.timewindowoverlap = 0; %128 for another paper
 
 w.starttimes = w.totaltimewindow(1):(w.timewindowbinsize-w.timewindowoverlap):w.totaltimewindow(2);
@@ -137,7 +140,7 @@ w.alltimewindowsforfeatures = [w.starttimes; w.endtimes]; %(:,1) for first pair
 %%
 
 %includedfeatures = {'bp2t20','bp40t56','bp64t80' ,'bp80t110'};
-includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var'};
+includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var','mpv','var','ssi'};
 %includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
 %includedfeatures = {'rms', 'iemg','mmav1','var'}; %names of included features in the data table
 
@@ -203,6 +206,8 @@ for ttround = 1:2
                         fvalues = [fvalues squeeze(var(EEG.data(ch,timewindowepochidx,idxt), 0, 2))];
                     case 'bp2t20'                       
                         fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[2 20])'];
+                    case 'bp20t40'                       
+                        fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[20 40])'];
                     case 'bp40t56'                       
                         fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[40 56])'];
                     case 'bp64t80'                       
@@ -268,8 +273,10 @@ imbalancedcostmatrix.ClassificationCosts
 trainedClassifier = fitcsvm(predictors, ...
     response, ...
     'KernelFunction', 'Linear', ...
-    'Standardize',true,...  
-    'Cost',imbalancedcostmatrix );  % Rows are true for cost matrix
+    'Standardize',false,...  
+    'Prior','empirical');%,...
+    %'Cost',imbalancedcostmatrix );  % Rows are true for cost matrix
+   
 %trainedClassifier = fitcecoc(predictors,response,'KernelFunction', 'Linear');
 %'OutlierFraction',0.15,...
 
@@ -294,6 +301,7 @@ if dotrainandtest
     [predictedlabel,score] = predict(trainedClassifier,testdata(:,predictorNames));
     testAccuracy = sum(testdata.labels==predictedlabel)./length(testdata.labels);
     fprintf('\nTest accuracy = %.2f%%\n', testAccuracy*100);
-    testconchart = confusionchart(testdata.labels,predictedlabel,'Normalization','row-normalized');
+    figure;
+    testconchart = confusionchart(testdata.labels,predictedlabel);%,'Normalization','row-normalized'
     testconchart.NormalizedValues
 end

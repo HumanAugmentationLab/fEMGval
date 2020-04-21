@@ -32,9 +32,9 @@ writetable(eventtable,'run15manualevents.txt')
 EEG = pop_select(EEG,'channel',1:2); %just select the 2 channels with data.
 
 % high pass filter
-EEG = pop_eegfiltnew(EEG,0.1); 
+EEG = pop_eegfiltnew(EEG,0.5); 
 
-EEG = pop_eegfiltnew(EEG,59,61,'revfilt',1); %notch filter 
+EEG = pop_eegfiltnew(EEG,56,64,'revfilt',1); %notch filter 
 
 % This runs out of memory
 %EEG = pop_cleanline(EEG, 'Bandwidth',2,'ChanCompIndices',[1:EEG.nbchan],                  ...
