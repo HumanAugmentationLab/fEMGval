@@ -140,10 +140,11 @@ w.alltimewindowsforfeatures = [w.starttimes; w.endtimes]; %(:,1) for first pair
 %%
 
 %includedfeatures = {'bp2t20','bp40t56','bp64t80' ,'bp80t110'};
-includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var','mpv','var','ssi'};
+%includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var','mpv','var','ssi'};
+% includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var'};
 %includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
 %includedfeatures = {'rms', 'iemg','mmav1','var'}; %names of included features in the data table
-
+includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var', 'medianfreq'};
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
 %skip in order to avoid repeat features)
@@ -214,8 +215,8 @@ for ttround = 1:2
                         fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[64 80])'];
                     case 'bp80t110'                       
                         fvalues = [fvalues bandpower(squeeze(EEG.data(ch,timewindowepochidx,idxt)),EEG.srate,[80 110])'];
-                    
-                    
+                    case 'medianfreq'
+                        fvalues = [fvalues squeeze(real(median(fft(EEG.data(ch,timewindowepochidx,idxt), '', 2), 2)))];
                     otherwise
                         disp(strcat('unknown feature: ', includedfeatures{f},', skipping....'))
                 end
