@@ -141,9 +141,9 @@ w.alltimewindowsforfeatures = [w.starttimes; w.endtimes]; %(:,1) for first pair
 
 %includedfeatures = {'bp2t20','bp40t56','bp64t80' ,'bp80t110'};
 %includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var','mpv','var','ssi'};
-includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var'};
+% includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var'};
 % includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
-%includedfeatures = {'rms', 'iemg','mmav1','var', 'mfl'}; % Include mfl
+includedfeatures = {'rms', 'iemg','mmav1','var', 'mfl', 'wamp'}; % Include mfl and wamp
 % includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var', 'medianfreq'};
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
@@ -219,6 +219,13 @@ for ttround = 1:2
                         fvalues = [fvalues squeeze(real(median(fft(EEG.data(ch,timewindowepochidx,idxt), '', 2), 2)))];
                     case 'mfl'
                         fvalues = [fvalues squeeze(real(log10(sqrt(sum(diff(EEG.data(ch,timewindowepochidx,idxt)).^2, 2)))))];
+                    case 'wamp'
+                        % There is almost definitely a better way to do
+                        % this.
+                        threshold = 0.05;
+                        shifted = circshift(EEG.data(ch,timewindowepochidx, idxt), 1, 2);
+                        wamp_sum = sum(abs(EEG.data(ch,timewindowepochidx, idxt)) + threshold < (abs(shifted)), 2);
+                        fvalues = [fvalues squeeze(wamp_sum)];
                     otherwise
                         disp(strcat('unknown feature: ', includedfeatures{f},', skipping....'))
                 end
