@@ -16,15 +16,24 @@ clear
 
 %load data/smilefrown1filt0p5notch56t64epochs.mat  % This one might not have the
 %120 notch
-% load data/smilefrown2filt0p5notch56t64p120epoch.mat
+%load data/smilefrown2filt0p5notch56t64p120epoch.mat
 %load data/run15filt0p5doublenotch56t64a120epochs.mat
 %load data/run16rawdatafilt0p5notch56t64epochs.mat
 %load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
-load data/run17rawdatafilt0p5notch56t64epochs.mat
+%load data/run17rawdatafilt0p5notch56t64epochs.mat
 
-%load data/run18rawdatafilt0p5notch56t64epochs.mat
+load data/run18rawdatafilt0p5notch56t64epochs.mat
+%load data/run20rawdatafilt0p5notch56t64epochs.mat
 
 %load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
+
+makebalanced = true;
+% If you want all conditions then use [];
+condnames =  {"DOWN pressed", "SPACE pressed"};
+
+dotrainandtest = true; %If false, do train only and cross validate
+% You might do false if you have very little data or if you have a separate
+% test set in another file
 
 %% Add some info to the EEG structure to make life easier (trial labels)
 
@@ -41,7 +50,6 @@ for epoch = 1:EEG.trials
     end
 end
 EEG.epochlabelscat = categorical(EEG.epochlabelscat);
-%
 
 %make an array of all possible labels of events in your data
 availableeventlabels = unique(EEG.epochlabelscat);
@@ -66,10 +74,32 @@ for channel =1:size(EEG.data,1)
     %EEG.data(channel,:, :) = highpass(squeeze(EEG.data(channel,:, :)),20,EEG.srate);
 end
 
-%% Select which conditions to include in your analysis
+%% Select which conditions to include in your analysis and if you want to balance your data
 
-% If you want all conditions then use [];
-condnames =  {"SPACE pressed", "DOWN pressed"};
+if makebalanced
+    
+    mydata = EEG.data;
+    
+    for c = 1:length(condnames)
+        num_trials(c) = sum(EEG.epochlabelscat==condnames{c});
+    end
+    num_trialspercond = min(num_trials);
+
+    clear idx bicx balidx
+    for c = 1:length(condnames)
+        idx{c,:} = find(EEG.epochlabelscat==condnames{c});
+        bicx(c,:) = idx{c}(randperm(length(idx{c}),num_trialspercond));
+    end
+
+    balidx = reshape(bicx,[],1);
+    balidx = balidx(randperm(length(balidx)));
+
+    EEG.data = mydata(:,:,balidx);
+   
+    EEG.epochlabelscat = EEG.epochlabelscat(balidx);
+    
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -86,9 +116,7 @@ else
 end
 
 %% Train/test separation 
-dotrainandtest = false; %If false, do train only and cross validate
-% You might do false if you have very little data or if you have a separate
-% test set in another file
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,7 +147,7 @@ end
 
 %% Do feature extraction for selected trials
 
-w.totaltimewindow = [200 1400]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
+w.totaltimewindow = [0 2000]; %start and stop in ms. If timepoints don't line up, this will select a slightly later time
 %timetimewindowepochidx = (find(EEG.times>=timewindowforfeatures(1),1)):(find(EEG.times>=timewindowforfeatures(2),1));
 
 w.timewindowbinsize = 200; %This should ideally divide into an equal number of time points
@@ -137,14 +165,14 @@ if length(w.starttimes) > length(w.endtimes)
 end
 w.alltimewindowsforfeatures = [w.starttimes; w.endtimes]; %(:,1) for first pair
 
-%%
+%% Select features
 
 %includedfeatures = {'bp2t20','bp40t56','bp64t80' ,'bp80t110'};
-%includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var','mpv','var','ssi'};
+includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var','mpv','var','ssi'};
 % includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var'};
-%includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
+%includedfeatures = {'rms','ssi'}%, 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
 %includedfeatures = {'rms', 'iemg','mmav1','var'}; %names of included features in the data table
-includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var', 'medianfreq'};
+%includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var', 'medianfreq'};
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
 %skip in order to avoid repeat features)
@@ -260,8 +288,6 @@ end
 
 traindata = splitvars(traindata); %split subvariables into independent variable to not anger the classifier.
 
-
-
 fprintf(strcat('Classifying _',condnames{1}, ' and _', condnames{2},' \n'))
 % Predictors are features
 predictorNames = traindata.Properties.VariableNames(3:end); %This selects all but first two (assumed to be labels and orig index number, fix if this is not the case, or you can manually select here)
@@ -270,19 +296,19 @@ response = traindata(:,'labels'); %labels
 
 imbalancedcostmatrix.ClassNames = unique(response{:,1}); 
 imbalancedcostmatrix.ClassificationCosts =  [0 sum(traindata.labels == imbalancedcostmatrix.ClassNames(2)); sum(traindata.labels == imbalancedcostmatrix.ClassNames(1)) 0];
-imbalancedcostmatrix.ClassificationCosts
+%imbalancedcostmatrix.ClassificationCosts
 trainedClassifier = fitcsvm(predictors, ...
     response, ...
     'KernelFunction', 'Linear', ...
-    'Standardize',false,...  
-    'Prior','empirical');%,...
+    'Standardize',true);%,...  
+    %'Prior','empirical');%,...
     %'Cost',imbalancedcostmatrix );  % Rows are true for cost matrix
    
 %trainedClassifier = fitcecoc(predictors,response,'KernelFunction', 'Linear');
 %'OutlierFraction',0.15,...
 
 % k-fold cross validation
-kval = min(5,height(response)-2); %Choose number of folds. You can also just set this manually.
+kval = 5;%min(5,height(response)-2); %Choose number of folds. You can also just set this manually.
 cpart = cvpartition(response{:,1},'KFold',kval); % k-fold stratified cross validation
 partitionedModel = crossval(trainedClassifier,'CVPartition',cpart);
 [validationPredictions, validationScores] = kfoldPredict(partitionedModel);
@@ -295,14 +321,14 @@ trainconchart = confusionchart(traindata.labels,validationPredictions);
 % 
 trainconchart.NormalizedValues
 
-if dotrainandtest
-    testdata = splitvars(testdata); %split subvariables into variables
-    
-    % Code for prediction of test data (stored here for later)
-    [predictedlabel,score] = predict(trainedClassifier,testdata(:,predictorNames));
-    testAccuracy = sum(testdata.labels==predictedlabel)./length(testdata.labels);
-    fprintf('\nTest accuracy = %.2f%%\n', testAccuracy*100);
-    figure;
-    testconchart = confusionchart(testdata.labels,predictedlabel);%,'Normalization','row-normalized'
-    testconchart.NormalizedValues
-end
+% if dotrainandtest
+%     testdata = splitvars(testdata); %split subvariables into variables
+%     
+%     % Code for prediction of test data (stored here for later)
+%     [predictedlabel,score] = predict(trainedClassifier,testdata(:,predictorNames));
+%     testAccuracy = sum(testdata.labels==predictedlabel)./length(testdata.labels);
+%     fprintf('\nTest accuracy = %.2f%%\n', testAccuracy*100);
+%     figure;
+%     testconchart = confusionchart(testdata.labels,predictedlabel);%,'Normalization','row-normalized'
+%     testconchart.NormalizedValues
+% end
