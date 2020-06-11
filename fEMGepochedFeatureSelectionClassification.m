@@ -22,14 +22,16 @@ clear
 %load data/smilefrownangryblinkS1filt0p5notch56t64epochs.mat
 %load data/run17rawdatafilt0p5notch56t64epochs.mat
 
-load data/run18rawdatafilt0p5notch56t64epochs.mat
+%load data/run18rawdatafilt0p5notch56t64epochs.mat
 %load data/run20rawdatafilt0p5notch56t64epochs.mat
+%load data/run21rawdatafilt0p5notch56t64epochs.mat % noise
+load data/run23rawdatafilt0p5notch56t64epochs.mat
 
 %load(fullfile('C:\Users\saman\Documents\MATLAB\study1_emg', 'study1_EMG_P-01combined.mat'))
 
 makebalanced = true;
 % If you want all conditions then use [];
-condnames =  {"DOWN pressed", "SPACE pressed"};
+condnames =  {"LEFT pressed", "SPACE pressed"};
 
 dotrainandtest = true; %If false, do train only and cross validate
 % You might do false if you have very little data or if you have a separate
@@ -174,7 +176,7 @@ includedfeatures = {'bp2t20','bp20t40','bp40t56','bp64t80' ,'bp80t110','rms', 'i
 %includedfeatures = {'rms', 'iemg','mmav1','var'}; %names of included features in the data table
 %includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var', 'medianfreq'};
 % includedfeatures = {'rms', 'absmean','ssi','iemg','mmav1','mpv','var'}; %names of included features in the data table
-includedfeatures = {'rms', 'iemg','mmav1','var', 'mfl', 'wamp'}; % Include mfl and wamp
+%includedfeatures = {'rms', 'iemg','mmav1','var', 'mfl', 'wamp'}; % Include mfl and wamp
 % includedfeatures = {'bp40t56','bp64t80' ,'bp80t110','rms', 'iemg','mmav1','var', 'medianfreq'};
 includedchannels = 1:2; %channels to included, this will calculate features for each separately 
 %(if you have cross channel features, you need to write something in to
@@ -333,14 +335,14 @@ trainconchart = confusionchart(traindata.labels,validationPredictions);
 % 
 trainconchart.NormalizedValues
 
-% if dotrainandtest
-%     testdata = splitvars(testdata); %split subvariables into variables
-%     
-%     % Code for prediction of test data (stored here for later)
-%     [predictedlabel,score] = predict(trainedClassifier,testdata(:,predictorNames));
-%     testAccuracy = sum(testdata.labels==predictedlabel)./length(testdata.labels);
-%     fprintf('\nTest accuracy = %.2f%%\n', testAccuracy*100);
-%     figure;
-%     testconchart = confusionchart(testdata.labels,predictedlabel);%,'Normalization','row-normalized'
-%     testconchart.NormalizedValues
-% end
+if dotrainandtest
+    testdata = splitvars(testdata); %split subvariables into variables
+    
+    % Code for prediction of test data (stored here for later)
+    [predictedlabel,score] = predict(trainedClassifier,testdata(:,predictorNames));
+    testAccuracy = sum(testdata.labels==predictedlabel)./length(testdata.labels);
+    fprintf('\nTest accuracy = %.2f%%\n', testAccuracy*100);
+    figure;
+    testconchart = confusionchart(testdata.labels,predictedlabel);%,'Normalization','row-normalized'
+    testconchart.NormalizedValues
+end

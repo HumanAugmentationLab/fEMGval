@@ -17,8 +17,9 @@ for r= 1:length(allruns)
     lcell = importdata(strcat(dirname,'labelSet_',num2str(runnum),'new_relaxedDown.csv'));
     lcell = split(lcell{1,1},',',1);
     labels = categorical(lcell);
-    data = [testSet0; testSet1];
-
+    data = [testSet0 ; testSet1];
+    %data = [testSet0];
+    num_channels =2;
 
     % Code for doing from Minjus folder system
     % dirname = 'data/studentfeatures/trial_15/';
@@ -39,14 +40,14 @@ for r= 1:length(allruns)
     % clear set0 set1 event_names
 
     %% Select only the conditions you want, remove the rest
-    condnames = {'SPACE','BASELINE'};
+    condnames = {'S Pressed','F Pressed'};
     idxdata = (labels== condnames{1} | labels ==condnames{2});
 
     y = labels(idxdata);
     y = removecats(y);
     X = data(:,idxdata)';
 
-    %% Make the data balanced by undersampling (you can skip this step)
+    %% Make the data balanced by undersampling (you can skip this step if you want imbalanced data)
     Xorig = X;
     yorig = y;
     num_trials=[];
@@ -106,21 +107,25 @@ for r= 1:length(allruns)
 
     % Cross validation output
     %validationAccuracy = 1 - kfoldLoss(partitionedModel);%, 'LossFun', 'ClassifError');
-    valCC(r).trainconchart = confusionchart(ytrain,validationPredictions);
+%     valCC(r).trainconchart = confusionchart(ytrain,validationPredictions);
 
     validationAccuracy(r) = sum(ytrain==validationPredictions)./length(ytrain);
     fprintf('\nValidation accuracy = %.2f%%\n', validationAccuracy*100);
 
     % ,'Normalization','row-normalized'
     % 
-    valCC(r).trainconchart.NormalizedValues
+%    valCC(r).trainconchart.NormalizedValues
 
     %% Loop through each feature
-    numindfeatures = (size(X,2)/2);
-    featurepairs = [1:numindfeatures; (numindfeatures+1):(numindfeatures+numindfeatures)];
+    numindfeatures = (size(X,2)/2); %SWM: FIX for 1
+    if num_channels == 2
+        featurepairs = [1:numindfeatures; (numindfeatures+1):(numindfeatures+numindfeatures)];
+    else
+        featurepairs = 1:numindfeatures;
+    end
     %indfeatclassrate = zeros(numindfeatures,1);
     for nf = 1:numindfeatures
-       trainedClassifierInd = fitcsvm(Xtrain(:,featurepairs(:,nf)), ...
+        trainedClassifierInd = fitcsvm(Xtrain(:,featurepairs(:,nf)), ...
         ytrain, ...
         'KernelFunction', 'Linear', ...
         'Standardize',true);
@@ -139,7 +144,11 @@ for r= 1:length(allruns)
 
         [B,indtopfeatures] = maxk(indfeatclassrate(r,:),numtopfeatures);
 
-        topfeaturepairs = [indtopfeatures (numindfeatures + indtopfeatures)];
+        if num_channels ==2
+            topfeaturepairs = [indtopfeatures (numindfeatures + indtopfeatures)];
+        else
+            topfeaturepairs = [indtopfeatures];
+        end
 
         trainedClassifierInd = fitcsvm(Xtrain(:,topfeaturepairs), ...
             ytrain, ...
@@ -156,15 +165,32 @@ for r= 1:length(allruns)
 
 
     %% Select the top number of features as best classifier for this dataset
-    [mm, mi] = max(accuracyofselfeatures(r,:));
-    fprintf('\n Selected feature accuracy = %.2f%% found with %i features.\n', mm*100,mi)
+%     [mm, mi] = max(accuracyofselfeatures(r,:));
+%     fprintf('\n Selected feature accuracy = %.2f%% found with %i features.\n', mm*100,mi)
+% 
+%     numtopfeatures = mi; %Actual number of features will be twice this
+% 
+%     [B,indtopfeatures] = maxk(indfeatclassrate(r,:),numtopfeatures);
 
-    numtopfeatures = mi; %Actual number of features will be twice this
+% Try to find average accuracy
 
-    [B,indtopfeatures] = maxk(indfeatclassrate(r,:),numtopfeatures);
+    %indtopfeatures = [ 14    11    15    20    16     5    10    22     2    21     4     8    12    23 ];
+    %indtopfeatures = [4    12    11    14    13     2     3    23    21     7]; % median across runs
+    indtopfeatures = [4    12    11    14    13     2     3    23  21];
+    
+    %indtopfeatures = [12    11    23    14     4    13     3    18    17     2]; % mean across runs
 
-    topfeaturepairs = [indtopfeatures (numindfeatures + indtopfeatures)];
+    
+    numtopfeatures = length(numtopfeatures);
+    
+    if num_channels == 2 %if using both channels
+        topfeaturepairs = [indtopfeatures (numindfeatures + indtopfeatures)];
+    else
+        topfeaturepairs = [indtopfeatures];
+    end
 
+    
+    
     trainedClassifierInd = fitcsvm(Xtrain(:,topfeaturepairs), ...
         ytrain, ...
         'KernelFunction', 'Linear', ...
@@ -174,7 +200,7 @@ for r= 1:length(allruns)
     [validationPredictionsInd, ~] = kfoldPredict(partitionedModelInd);
 
     accuracyoftopselesctedValidation(r,1) = sum(ytrain==validationPredictionsInd)./length(ytrain); 
-    accuracyoftopselesctedValidation(r,2) = mi;
+%    accuracyoftopselesctedValidation(r,2) = mi;
 
 
 
@@ -185,9 +211,9 @@ for r= 1:length(allruns)
     [predictedlabel,score] = predict(trainedClassifier,Xtest);
     testAccuracy(r) = sum(ytest==predictedlabel)./length(ytest);
     fprintf('\nTest accuracy = %.2f%%\n', testAccuracy*100);
-    figure;
-    testCC(r).conchart = confusionchart(ytest,predictedlabel);%,'Normalization','row-normalized'
-    testCC(r).conchart.NormalizedValues
+%     figure;
+%     testCC(r).conchart = confusionchart(ytest,predictedlabel);%,'Normalization','row-normalized'
+%     testCC(r).conchart.NormalizedValues
 
 
     %% Run selected on test data, only run this at the end after you're done tweaking parameters
@@ -195,25 +221,25 @@ for r= 1:length(allruns)
     [predictedlabel,score] = predict(trainedClassifierInd,Xtest(:,topfeaturepairs));
     testAccuracySelected(r) = sum(ytest==predictedlabel)./length(ytest);
     fprintf('\nTest accuracy on selected features = %.2f%%\n', testAccuracy*100);
-    figure;
-    testselCC(r).conchart = confusionchart(ytest,predictedlabel);%,'Normalization','row-normalized'
-    testselCC(r).conchart.NormalizedValues
+%     figure;
+%     testselCC(r).conchart = confusionchart(ytest,predictedlabel);%,'Normalization','row-normalized'
+%     testselCC(r).conchart.NormalizedValues
 
 
 end
 %% Which ones are top
-clearvars itf
-nfth = 7;
-for r= 1:length(allruns)
-    [B,itf(r,:)] = maxk(indfeatclassrate(r,:),nfth);
-end
-
-itf;
-figure
-histogram(itf)
-set(gca,'FontSize',14)
-xlabel('Feature Number'); ylabel('Number of runs feature in top'); 
-title(['Top ',num2str(nfth),' features per run']);
+% clearvars itf
+% nfth = 7;
+% for r= 1:length(allruns)
+%     [B,itf(r,:)] = maxk(indfeatclassrate(r,:),nfth);
+% end
+% 
+% itf;
+% figure
+% histogram(itf)
+% set(gca,'FontSize',14)
+% xlabel('Feature Number'); ylabel('Number of runs feature in top'); 
+% title(['Top ',num2str(nfth),' features per run']);
 
 %% Plot accuracy based on number of features
 figure
@@ -222,11 +248,106 @@ xlabel('Number of features per channel'); ylabel('Classification Accuracy on Sel
 set(gca,'FontSize',14);
 
 for r= 1:length(allruns)
-    runlegend{r} = strcat('Run  ',num2str(allruns(r)));
+    runlegend{r} = ['Run ' num2str(allruns(r))];
 end
-legend(runlegend)
+legend(runlegend);
 
 indfeatclassrate;
+
+%% Spit out results of accuracy
+
+disp('train accuracy all')
+validationAccuracy'
+disp('test accuracy all')
+testAccuracy'
+
+%accuracyoftopselesctedValidation(:,2)
+disp('train accuracy sel')
+accuracyoftopselesctedValidation(:,1)
+disp('test accuracy sel')
+testAccuracySelected'
+
+
+disp('mean accuracies')
+mean(accuracyoftopselesctedValidation(:,1))
+
+
+%% Plot of the accuracy of individual features
+
+figure;
+%bar(indfeatclassrate)
+bar(mean(indfeatclassrate))
+hold on
+errorbar(mean(indfeatclassrate), 2*std(indfeatclassrate),'Color','k', 'LineWidth',2,'LineStyle','none');
+
+ylim([0.2, 0.8]);
+yline(0.5,'k--');
+ylabel('Classification Accuracy');
+xlabel('Feature Number')
+title('Classification Rates for Individual Features (2 channels)')
+set(gca,'FontSize',14)
+
+%% Plot accuracy of individual features as line graph
+figure
+plot(indfeatclassrate','LineWidth',2);
+hold on
+plot(mean(indfeatclassrate),'k--','LineWidth',2);
+runlegend{5} ="Average";
+runlegend{6} = "Chance";
+
+ylim([0.2, 0.8]);
+yline(0.5,'k--');
+legend(runlegend);
+ylabel('Classification Accuracy');
+xlabel('Feature Number')
+title('Classification Rates for Individual Features (2 channels)')
+set(gca,'FontSize',18)
+%% median
+% mean(testAccuracy)
+% 
+% ans =
+% 
+%     0.6306
+% 
+% mean(testAccuracySelected)
+% 
+% ans =
+% 
+%     0.7326
+% 
+% mean(validationAccuracy)
+% 
+% ans =
+% 
+%     0.6099
+% 
+% mean(accuracyoftopselesctedValidation(:,1))
+% 
+% ans =
+% 
+%     0.5901
+% 
+
+
+% % with 8
+% mean(accuracyoftopselesctedValidation(:,1))
+% 
+% ans =
+% 
+%     0.6110
+% 
+% mean(validationAccuracy)
+% 
+% ans =
+% 
+%     0.6099
+% 
+% mean(testAccuracySelected)
+% 
+% ans =
+% 
+%     0.7247
+% 
 
 %%
 % 
